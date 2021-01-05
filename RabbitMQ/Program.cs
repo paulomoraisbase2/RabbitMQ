@@ -20,28 +20,25 @@ namespace RabbitMQ
             if (conn.IsOpen)
             {
                 var channel = conn.CreateModel();
-                //channel.ExchangeDeclare("Rota", ExchangeType.Fanout);
                 FanoutReceive(channel, 1);
                 FanoutReceive(channel, 2);
-                Thread.Sleep(6000);
                 FanoutSender(channel);
 
+                Thread.Sleep(6000);
 
                 var channelDirect = conn.CreateModel();
-                //channelDirect.ExchangeDeclare("Rota_Direta", ExchangeType.Direct);
                 DirectReceive(channelDirect, new string[] { "error" });
                 DirectReceive(channelDirect, new string[] { "warning", "info" });
-                Thread.Sleep(6000);
                 DirectSender(channelDirect);
 
-
+                Thread.Sleep(6000);
 
                 var channelTopic = conn.CreateModel();
-                //channelDirect.ExchangeDeclare("Rota_Direta", ExchangeType.Direct);
                 TopicReceive(channelTopic, "A.*");
                 TopicReceive(channelTopic, "*.error");
-                Thread.Sleep(6000);
+                TopicReceive(channelTopic, "#");
                 TopicSender(channelTopic);
+
                 _ = Console.ReadLine();
             }
         }
@@ -120,7 +117,6 @@ namespace RabbitMQ
         {
             channel.ExchangeDeclare(exchange: "Rota_Direta", type: ExchangeType.Direct);
 
-
             var queueName = channel.QueueDeclare("", true).QueueName;
 
             Log.Warning($" [*] Fila {severities.Length} Esperando por registros.");
@@ -129,7 +125,6 @@ namespace RabbitMQ
                 channel.QueueBind(queue: queueName,
                                  exchange: "Rota_Direta",
                                  routingKey: item);
-
             }
             var consumer = new EventingBasicConsumer(channel);
             consumer.Received += (model, ea) =>
@@ -143,6 +138,7 @@ namespace RabbitMQ
                                      autoAck: true,
                                      consumer: consumer);
         }
+
         public static void TopicSender(IModel channel)
         {
             IBasicProperties props = channel.CreateBasicProperties();
@@ -173,7 +169,6 @@ namespace RabbitMQ
         {
             channel.ExchangeDeclare(exchange: "Rota_Topic", type: ExchangeType.Topic);
 
-
             var queueName = channel.QueueDeclare("", true).QueueName;
 
             Log.Warning($" [*] Fila {componente} Esperando por registros.");
@@ -181,7 +176,6 @@ namespace RabbitMQ
             channel.QueueBind(queue: queueName,
                                  exchange: "Rota_Topic",
                                  routingKey: componente);
-
 
             var consumer = new EventingBasicConsumer(channel);
             consumer.Received += (model, ea) =>
